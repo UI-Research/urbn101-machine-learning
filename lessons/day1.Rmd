@@ -1,0 +1,241 @@
+---
+title: ""
+author: ""
+date: "`r format(Sys.time(), '%B %d, %Y %H:%M')`"
+output:
+  html_document:
+    toc: TRUE
+    toc_float: TRUE
+    css: !expr here::here("www", "web_report.css")
+    editor_options:
+      chunk_output_type: console
+---
+
+<style>
+@import url('https://fonts.googleapis.com/css?family=Lato&display=swap');
+</style>
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Lato" />
+
+![](`r here::here("www", "images", "urban-institute-logo.png")`)
+
+# Day 1: Introduction to Machine Learning Concepts 
+
+**Aaron R. Williams - Data Scientist (IBP)**
+
+```{r rmarkdown-setup, echo = FALSE}
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+
+options(scipen = 999)
+
+```
+
+```{r setup}
+# please ensure that these packages are installed
+library(tidyverse)
+library(tidymodels)
+
+```
+
+## Motivation
+
+**Machine Learning:** The use of computer algorithms to parse data and estimate models that can be used for prediction, categorization, or dimension reduction. 
+
+**Predictive Modeling:** "The process of developing a mathematical tool or model that generates an accurate prediction." ~ Max Kuhn and Kjell Johnson in Applied Predictive Modeling
+
+### Four Applications
+
+1. **Imputing Missing Values:** Under certain assumptions, machine learning algorithms can be used to impute missing values in data sets. This can be used for creating data sets for statistical analysis or for the generation of synthetic data. 
+2. **Resource Allocation:** Predictive models can be used to allocate scarce resources. [Researchers used machine learning to target lead paint abatement in Chicago](http://www.dssgfellowship.org/wp-content/uploads/2016/01/p2039-potash.pdf) and [researchers were using machine learning to target lead and galvanized steel pipe removal in Flint, Michigan.](https://www.theatlantic.com/technology/archive/2019/01/how-machine-learning-found-flints-lead-pipes/578692/)
+3. **Scaling Data Labeling:** Machine learning can be used to scale hand data labeling to many more observations. For example, [JPC hand-labeled several thousand tweets, trained a machine learning model, and used predictions from that model to label millions of tweets.](https://medium.com/@urban_institute/how-to-categorize-large-amounts-of-text-data-71e1fd590e2a) This is also useful for tasks like image recognition. 
+4. **Anomaly Detection:** If an accurate model is estimated, large divergences from model predictions can indicate outliers or anomalies. For example, an ombudsman may use anomaly detection to evaluate the quality and consistency of restaurant inspectors. 
+
+There are many applications of machine learning for applied econometrics. This will not be a focus of this training. Many useful links are available [here](https://urbanorg.box.com/s/hhl1n8b5sowiiq713qhy4mvhrgd3th10). 
+
+## Concepts
+
+### Supervised Learning
+
+**Supervised Learning:** Predictive modeling with a "target", "response", or "outcome" variable.
+
+**Regression:** Supervised learning with a continuous numeric outcome.
+
+**Classification:** Supervised learning with a categorical outcome. The output of these models can be predicted classes of a categorical variable or predicted probabilities (e.g. 0.75 for "A" and 0.25 for "B").
+
+## Unsupervised Learning
+
+**Unsupervised Learning:** A process of summarizing data without a "target", "response", or "outcome" variable. 
+
+**Clustering:** Grouping observations into homogeneous groups. 
+
+**Dimension reduction:** Reducing the number of variables in a data set while maintaining the statistical properties of the data.
+
+## Differences Between Inference and Prediction
+
+### 1. Statistical summary
+
+### 2. Inference
+
+The second reason to build a statistical model is for inference. Here, the goal is to test a set of formal hypotheses with $H_0$ as the null hypothesis and $H_a$ as the alternative hypothesis. The hypotheses usually focus on the coefficients (e.g. $\beta_1 \ne 0$). Care should be taken with inference to develop hypotheses based on theory and to limit the number of tests conducted on a given set of data. Assumptions are also tremendously important. For example, simple linear regression assumes:
+
+1. Population model: $Y_i = \beta_0 + \beta_1 X_i + \epsilon_i$
+2. The estimation data come from a random sample or experiment
+3. $\epsilon_i \sim N(0, \sigma^2)$ independently and identically distributed (i.i.d.)
+
+If these assumptions are approximately met, then test statistics can be developed from known sampling distributions. For coefficients, this is the $t$-distribution with $n - p$ degrees of freedom. 
+
+### 3. Prediction
+
+The final motivation for building a statistical model is prediction. Here, the goal is make informed and accurate guesses about the value or level of a variable given a set of predictor variables. Unlike inference, which usually focuses on coefficients of predictor variables, the focus here is on the dependent variable. 
+
+Prediction will be the focus of supervised machine learning.
+
+$$\cdot\cdot\cdot$$
+
+The same statistical model can summarize, be used for inference, and make valid and accurate predictions. However, the optimal model for one motivation is rarely best for all three motivations. Thus, it is important to clearly articulate the motivation for a statistical model before picking which tools and diagnostics to use.
+
+Switching from an inferential framework to a predictive framework results in two important implications.
+
+## Implication 1. New Algorithms
+
+Models that are easily interpretable are less useful if the sole objective is to make accurate predictions. Accordingly, predictive modeling considers a much wider range of parametric and nonparametric models. Some of the models are difficult or nearly impossible to understand.
+
+It is easy to get caught up in all of algorithms, but it is far more important to understand the process of predictive modeling. We will focus on two new algorithms:
+
+1. $K$-Nearest Neighbors (KNN)
+2. Classification and Regression Trees (CART)
+
+## Implication 2. New methods for determining the usefulness of a model
+
+Unlike algorithms used for inference, many of the algorithms used for predictive modeling do not have distributional assumptions. This means that many diagnostics based on distributional assumptions are no longer available for model evaluation: $F$-test, standard error of a coefficients, $t$-test, prediction interval, regression line interval. 
+
+Instead, an error metric is chosen and then a key objective is estimating the out-of-sample value of that error rate using available data. The out-of-sample error rate is rarely known. Instead it is estimated. 
+
+**GOAL:** Minimize the prediction error of the estimated regression model on new data (out-of-sample). 
+
+There are several metrics for estimating error. The most popular for regression is Root Mean Square Error (RMSE):
+
+$$RMSE = \sqrt{\frac{1}{n} \sum_{i = 1}^n (Y_i - \hat{Y_i})^2}$$
+
+We will discuss error metrics for classification later. 
+
+### Concepts for Estimating Out-of-Sample Error
+
+**Generalizability:** How well a model makes predictions on unseen data relative to how well it makes predictions on the data used to estimate the model. (like external validity)
+
+**In-sample error:** The predictive error of a model measured on the data used to estimate the predictive model. 
+
+**Out-of-sample error:** The predictive error of a model measured on the data **not** used to estimate the predictive model. Out-of-sample error is generally greater than the in-sample error.
+
+**Training set:** A subset of data used to develop a predictive model. The share of data committed to a training set depends on the number of observations, the number of predictors in a model, and heterogeneity in the data. 0.8 is a common share. 
+
+**Testing set:** A subset of data used to estimate model performance. The testing set usually includes all observations not included in the testing set. *Do not look at these data until the very end and only estimate the out-of-sample error rate on the testing set once.* If the error rate is estimated more than once on the testing data, it will underestimate the error rate.
+
+**Data leakage:** When information that won't be available when the model makes out-of-sample predictions is used when estimating a model. Looking at data from the testing set creates data leakage. Data leakage leads to an underestimate of out-of-sample error. 
+
+### Process
+
+1. Split the data into a training set and a testing set. 
+2. Estimate a model using the training data set.  
+3. Make predictions on the testing data set and estimate an error metric. 4. If the model is "good", then implement the model and make predictions.
+5. Regularly evaluate implemented models to see how well the model generalizes. 
+
+## $K$-Nearest Neighbors (KNN)
+
+$K$-Nearest Neighbors (KNN) is an algorithm that makes predictions based on the average (regression) or majority vote (classification) of the $k$ most similar observations. Similar is measured by the distances between predictors in the training data and the observation for which a prediction is being made.
+
+Consider the following five observations:
+
+```{r echo = FALSE, fig.width = 4, fig.height = 4}
+knn_data <- tibble(
+  x = 1:5,
+  y = c(1, 3, 9, 8, 7),
+  k1 = c("ignored", "ignored", "included", "ignored", "ignored"),
+  k3 = c("ignored", "included", "included", "included", "ignored"),
+) 
+
+knn_data %>%
+  ggplot(aes(x, y)) +
+  geom_point() +
+  scale_x_continuous(limits = c(0, 6)) +
+  scale_y_continuous(limits = c(0, 10)) +
+  labs(title = "KNN1: Prediction with One Predictor") +
+  theme_minimal()
+
+```
+
+Suppose for a given *new* observation with a known value of $x_{new}$ and an unknown value of $y$, the goal is to predict $\hat{y}$. KNN finds the closest $k$ values of $x$ to $x_{new}$ and predicts $\hat{y}$ as the mean of the $y$ values for the $k$ observations. 
+
+If $x_{new} = 3$ and $k = 1$, then $\hat{y} = 9$.  
+
+```{r echo = FALSE, fig.width = 4, fig.height = 4}
+knn_data %>%
+  ggplot(aes(x, y, color = k1, size = k1)) +
+  geom_point() +
+  scale_x_continuous(limits = c(0, 6)) +
+  scale_y_continuous(limits = c(0, 10)) +
+  labs(title = "KNN1: xnew = 3 and k = 1") +
+  theme_minimal() +
+  guides(color = FALSE, size = FALSE)
+
+```
+
+If $x_{new} = 3$ and $k = 3$, then $\hat{y} = \frac{3 + 9 + 8}{3} \approx 6.67$.  
+
+```{r echo = FALSE, fig.width = 4, fig.height = 4}
+knn_data %>%
+  ggplot(aes(x, y, color = k3, size = k3)) +
+  geom_point() +
+  scale_x_continuous(limits = c(0, 6)) +
+  scale_y_continuous(limits = c(0, 10)) +
+  labs(title = "KNN1: xnew = 3 and k = 3") +  
+  theme_minimal() +
+  guides(color = FALSE, size = FALSE)
+
+```
+
+Finding the closest observation is trivial for a 1-dimensional predictor. Of course, most applications have more than one predictor. In these applications, Euclidean distance is a common way of measuring the distances between $\mathbf{X}$ and $\vec{x}_{new}$:
+
+$$\text{Euclidean Distance} = \sqrt{\sum_{k = 1}^P (x_{ik} - x_{jk})^2}$$
+
+Consider the following four observations with two predictors, $x_1$ and $x_2$.
+
+```{r echo = FALSE, fig.width = 3, fig.height = 3}
+knn_data2 <- 
+  tribble(
+    ~x1, ~x2, ~point,
+    0, 0, "",
+    3, 3, "a",
+    -3, -4, "b",
+    -2, 5, "c",
+    6, -6, "d"
+  )
+
+ggplot() +
+  geom_hline(yintercept = 0, color = "grey") +
+  geom_vline(xintercept = 0, color = "grey") +  
+  geom_text(data = knn_data2, aes(x1, x2, label = point)) +
+  annotate(geom = "segment", x = 0, xend = 3, y = 0, yend = 3) +
+  annotate(geom = "segment", x = 0, xend = -2, y = 0, yend = 5) +
+  annotate(geom = "segment", x = 0, xend = -3, y = 0, yend = -4) +
+  annotate(geom = "segment", x = 0, xend = 6, y = 0, yend = -6) +
+  scale_x_continuous(limits = c(-8, 8)) +
+  scale_y_continuous(limits = c(-8, 8)) +
+  labs(title = "KNN2: Prediction with Two Predictors") +
+  theme_minimal()
+
+```
+
+$$dist_{a} = \sqrt{(3 - 0) ^ 2 + (3 - 0)^2} = \sqrt{9 + 9} = \sqrt{18}$$
+
+$$dist_{b} = \sqrt{(-3 - 0) ^ 2 + (-4 - 0)^2} = \sqrt{9 + 16} = \sqrt{25}$$
+
+$$dist_{c} = \sqrt{(-2 - 0) ^ 2 + (5 - 0)^2} = \sqrt{4 + 25} = \sqrt{29}$$
+
+$$dist_{d} = \sqrt{(6 - 0) ^ 2 + (-6 - 0)^2} = \sqrt{36 + 36} = \sqrt{72}$$
+
+When $k = 3$, the closest three observations are $\{a, b, c\}$
+
+**Note:** the scale of predictors is an important consideration when using KNN. 
+

@@ -2,6 +2,10 @@
 
 This repository contains materials for a six-session training about supervized machine learning hosting by the Urban Institute R Users Group.
 
+## Materials
+
+* [Day 1](https://ui-research.github.io/urbn101-machine-learning/lessons/day1)
+
 ## Recommended Reading
 
 * Day 1: 
