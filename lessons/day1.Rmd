@@ -48,10 +48,10 @@ library(tidymodels)
 
 1. **Imputing Missing Values:** Under certain assumptions, machine learning algorithms can be used to impute missing values in data sets. This can be used for creating data sets for statistical analysis or for the generation of synthetic data. 
 2. **Resource Allocation:** Predictive models can be used to allocate scarce resources. [Researchers used machine learning to target lead paint abatement in Chicago](http://www.dssgfellowship.org/wp-content/uploads/2016/01/p2039-potash.pdf) and [researchers were using machine learning to target lead and galvanized steel pipe removal in Flint, Michigan.](https://www.theatlantic.com/technology/archive/2019/01/how-machine-learning-found-flints-lead-pipes/578692/)
-3. **Scaling Data Labeling:** Machine learning can be used to scale hand data labeling to many more observations. For example, [JPC hand-labeled several thousand tweets, trained a machine learning model, and used predictions from that model to label millions of tweets.](https://medium.com/@urban_institute/how-to-categorize-large-amounts-of-text-data-71e1fd590e2a) This is also useful for tasks like image recognition. 
+3. **Scaling Data Labeling:** Machine learning can be used to scale hand data labeling to many observations. For example, [JPC hand-labeled several thousand tweets, trained a machine learning model, and used predictions from that model to label millions of tweets.](https://medium.com/@urban_institute/how-to-categorize-large-amounts-of-text-data-71e1fd590e2a) This is also useful for tasks like image recognition. 
 4. **Anomaly Detection:** If an accurate model is estimated, large divergences from model predictions can indicate outliers or anomalies. For example, an ombudsman may use anomaly detection to evaluate the quality and consistency of restaurant inspectors. 
 
-There are many applications of machine learning for applied econometrics. This will not be a focus of this training. Many useful links are available [here](https://urbanorg.box.com/s/hhl1n8b5sowiiq713qhy4mvhrgd3th10). 
+There are many applications of machine learning for applied econometrics and causal inference. This will not be a focus of this training. Many useful links are available [here](https://urbanorg.box.com/s/hhl1n8b5sowiiq713qhy4mvhrgd3th10). 
 
 ## Concepts
 
@@ -59,11 +59,15 @@ There are many applications of machine learning for applied econometrics. This w
 
 **Supervised Learning:** Predictive modeling with a "target", "response", or "outcome" variable.
 
+**Outcome variable:** The dependent variable in a predictive model. 
+
 **Regression:** Supervised learning with a continuous numeric outcome.
 
 **Classification:** Supervised learning with a categorical outcome. The output of these models can be predicted classes of a categorical variable or predicted probabilities (e.g. 0.75 for "A" and 0.25 for "B").
 
-## Unsupervised Learning
+**Predictor:** Independent variables or *features* in a predictive model.
+
+### Unsupervised Learning
 
 **Unsupervised Learning:** A process of summarizing data without a "target", "response", or "outcome" variable. 
 
@@ -73,7 +77,7 @@ There are many applications of machine learning for applied econometrics. This w
 
 ## Differences Between Inference and Prediction
 
-### 1. Statistical summary
+### 1. Statistical Summary
 
 ### 2. Inference
 
@@ -118,6 +122,8 @@ There are several metrics for estimating error. The most popular for regression 
 
 $$RMSE = \sqrt{\frac{1}{n} \sum_{i = 1}^n (Y_i - \hat{Y_i})^2}$$
 
+where $n$ is the number of observations, $Y_i$ is the observed value, and $\hat{Y}_i$ is the predicted value. 
+
 We will discuss error metrics for classification later. 
 
 ### Concepts for Estimating Out-of-Sample Error
@@ -138,12 +144,15 @@ We will discuss error metrics for classification later.
 
 1. Split the data into a training set and a testing set. 
 2. Estimate a model using the training data set.  
-3. Make predictions on the testing data set and estimate an error metric. 4. If the model is "good", then implement the model and make predictions.
+3. Make predictions on the testing data set and estimate an error metric.
+4. If the model is "good", then implement the model and make predictions.
 5. Regularly evaluate implemented models to see how well the model generalizes. 
 
 ## $K$-Nearest Neighbors (KNN)
 
 $K$-Nearest Neighbors (KNN) is an algorithm that makes predictions based on the average (regression) or majority vote (classification) of the $k$ most similar observations. Similar is measured by the distances between predictors in the training data and the observation for which a prediction is being made.
+
+### 1-Dimensional Example
 
 Consider the following five observations:
 
@@ -194,6 +203,8 @@ knn_data %>%
   guides(color = FALSE, size = FALSE)
 
 ```
+
+### 2-Dimensional Example
 
 Finding the closest observation is trivial for a 1-dimensional predictor. Of course, most applications have more than one predictor. In these applications, Euclidean distance is a common way of measuring the distances between $\mathbf{X}$ and $\vec{x}_{new}$:
 
