@@ -1,0 +1,352 @@
+---
+title: ""
+author: ""
+date: "`r format(Sys.time(), '%B %d, %Y %H:%M')`"
+output:
+  html_document:
+    toc: TRUE
+    toc_float: TRUE
+    css: !expr here::here("www", "web_report.css")
+    editor_options:
+      chunk_output_type: console
+---
+
+<style>
+@import url('https://fonts.googleapis.com/css?family=Lato&display=swap');
+</style>
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Lato" />
+
+![](`r here::here("www", "images", "urban-institute-logo.png")`)
+
+# Regression, no not that regression, in R (lab)
+
+**Aaron R. Williams - Data Scientist (IBP)**
+
+```{r rmarkdown-setup, echo = FALSE}
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+
+options(scipen = 999)
+
+```
+
+## Review
+
+## R Code
+
+```{r, echo = FALSE}
+knitr::include_graphics("images/tidymodels.png")
+```
+
+**Source:** [RStudio](https://rviews.rstudio.com/2019/06/19/a-gentle-intro-to-tidymodels/)
+
+Much predictive modeling in R can be handled with `library(tidymodels)`.
+
+* `library(rsample)` handles resampling.
+* `library(parsnip)` is a common interface to packages with predictive algorithms. 
+* `library(recipes)` handles feature engineering. 
+* `library(workflows)` manages putting everything together in resampling. 
+* `library(tune)` helps with hyperparameter tuning. 
+* `library(yardstick)` is used for evaluating models. 
+
+### [`library(rsample)`](https://github.com/tidymodels/rsample)
+
+* `initial_split()` Create an index for creating training and testing data.
+* `training()` Use the `initial_split()` object to create a training set.
+* `testing()` Use the `initial_split()` object to create a testing set.
+* `vfold_cv()` Create indices for v-fold cross-validation.
+
+### [`library(recipes)`](https://tidymodels.github.io/recipes/)
+
+* `recipe()` Begin creating a recipe for preprocessing.
+* `step_*()` A collection of functions with preprocessing and feature engineering steps.
+* `prep()` Estimate parameters for a recipe.
+* `bake()` Apply the computations from a recipe to a new data set.
+
+### [`library(parsnip)`](https://tidymodels.github.io/parsnip/)
+
+* `nearest_neighbor()` Generate a KNN specification before fitting a model.
+* `linear_reg()` Generate a linear regression specification before fitting a model.
+* `random_forest()` Generate a random forests specification before fitting a model.
+* `set_engine()` Pick the package used to fit a model.
+* `fit()` Estimate model parameters.
+
+### [`library(yardstick)`](https://github.com/tidymodels/yardstick)
+
+* `metrics()` Estimate common performance metrics
+* `rmse()` Estimate Root Mean Squared Error
+
+### `library(tune)`
+
+* `fit_resamples()` Estimate model parameters with resampling.
+* `collect_metrics()` Obtain and format results produced during resampling.
+* `collect_predictions()` Obtain and format predictions produced during resampling. 
+
+### `library(workflows)`
+
+* `workflow()` Create a container object to manage the model making process. 
+* `add_model()` Add a parnsip model to a workflow object. 
+* `add_recipe()` Add a recipe to a workflow object. 
+
+## Exercise 1
+
+Example 1 uses simulated data with one predictor $x$ and one outcome variable $y$. 
+
+* Step 1: Split the data into training and testing data
+* Step 2: Exploratory Data Analysis (EDA)
+* Step 3: Estimate a Model
+* Step 4: Evaluate a model
+* Step 5: Make a new prediction
+
+### Step 0. Load the data
+
+```{r message = FALSE, warning = FALSE}
+library(tidyverse)
+library(tidymodels)
+
+set.seed(20201004)
+
+x <- runif(n = 1000, min = 0, max = 10)
+
+data1 <- bind_cols(
+  x = x,
+  y = 10 * sin(x) + x + 20 + rnorm(n = length(x), mean = 0, sd = 2)
+)
+
+```
+
+Here, we know `y = f(x)`. In practice, this is unknown and our goal is to estimate or approximate it. 
+
+### Step 1. Split the data into training and testing data
+
+```{r}
+set.seed(20201007)
+
+# create a split object
+data1_split <- initial_split(data = data1, prop = 0.75)
+
+# create the training and testing data
+data1_train <- training(x = data1_split)
+data1_test  <- testing(x = data1_split)
+
+```
+
+### Step 2. Exploratory Data Analysis (EDA)
+
+```{r}
+# visualize the data
+data1_train %>%
+  ggplot(aes(x = x, y = y)) +
+  geom_point() +
+  labs(title = "Example 1 Data") +
+  theme_minimal()
+
+```
+
+### 3. Estimate a Model
+
+```{r}
+# create a knn model specification
+knn_mod <- 
+  nearest_neighbor(neighbors = 5) %>%
+  set_engine(engine = "kknn") %>%
+  set_mode(mode = "regression")
+
+# create a workflow object
+ex1_wf <- 
+  workflow() %>%
+  add_formula(y ~ x) %>%
+  add_model(knn_mod)
+
+# fit the ex1 workflow on the training data
+knn_fit <- ex1_wf %>%
+  fit(data = data1_train)
+
+```
+
+### 4. Evaluate a Model
+
+```{r}
+# use the estimated model to predict values in the testing data
+predictions <-
+  bind_cols(
+    data1_test,
+    predict(object = knn_fit, new_data = data1_test)
+  )
+
+# calculate the rmse on the testing data
+rmse(data = predictions, truth = y, estimate = .pred)
+
+```
+
+How good is this RMSE? It is relatively small when compared to the range of $y$, which suggests that this model is accurate. 
+
+```{r}
+summary(data1_test$y)
+
+```
+
+### 5. Make a New Prediction
+
+```{r}
+# make a novel prediction
+predict(object = knn_fit, new_data = tibble(x = 1:5))
+
+```
+
+### Bonus
+
+```{r}
+predictions <- 
+  bind_cols(
+    x = seq(from = 0, to = 10, by = 0.1),
+    predict(object = knn_fit, new_data = tibble(x = seq(from = 0, to = 10, by = 0.1)))
+  )
+  
+ggplot() +
+  geom_point(data = data1, aes(x = x, y = y)) +
+  geom_line(data = predictions, aes(x = x, y = .pred), color = "#1696d2", size = 1) +
+  labs(title = "Example 1 Data with Predictions") +
+  theme_minimal()
+
+```
+
+## Exercise 2
+
+```{r}
+penguins <- read_csv(here::here("data", "penguins.csv"))
+
+penguins
+
+```
+
+This examples uses the Palmer Penguins data set from `library(palmerpenguins)`. It contains the measurements of several hundred penguins. Imagine the scale randomly malfunctioned for twenty penguins and we need to impute the `NA` values for `body_mass_g` using other measurements as predictors. The predictors will be `bill_length_mm`, `bill_depth_mm`, and `flipper_length_mm`. 
+
+* Step 1: Split the data into training and testing data
+* Step 2: Exploratory Data Analysis (EDA)
+* Step 3: Estimate a Model
+* Step 4: Evaluate a model
+* Step 5: Make a new prediction
+
+### Step 0: Split the data into missing and non-missing
+
+First, we need to split our dataset into a data with missing observations and a dataset without missing observations. 
+
+```{r}
+penguins_na <- penguins %>%
+  filter(is.na(body_mass_g))
+
+penguins <- penguins %>%
+  filter(!is.na(body_mass_g))
+
+```
+
+Now, we will go through a supervised machine learning exercise with the non-missing data to estimate the best possible model to predict `body_mass_g`. 
+
+### Step 1: Split the data into training and testing data
+
+```{r}
+# split the data into a testing set. 
+set.seed(20201124)
+
+penguins_split <- initial_split(data = penguins, prop = 0.75)
+
+penguins_train <- training(x = penguins_split)
+
+```
+
+### Step 2: Exploratory Data Analysis (EDA)
+
+### Step 3: Estimate a Model
+
+```{r}
+
+# create a KNN model object
+# set neighbors to 31 - I chose this number in R/pick_n.R
+knn_mod <-
+  nearest_neighbor(neighbors = 31) %>% 
+  set_engine(engine = "kknn") %>% 
+  set_mode(mode = "regression")
+
+# create a recipe
+penguins_rec <- 
+  recipe(body_mass_g ~ bill_length_mm + bill_depth_mm + flipper_length_mm, 
+         data = penguins_train) %>%
+  step_normalize(bill_length_mm, bill_depth_mm, flipper_length_mm)
+
+# create a workflow
+penguins_wf <- 
+  workflow() %>%
+  add_model(knn_mod) %>%
+  add_recipe(penguins_rec)
+
+# fit the model
+penguins_best <- fit(penguins_wf, data = penguins_train)
+
+```
+
+### Step 4: Evaluate a model
+
+We now have a model estimated on the training data that we can use to predict values on the testing data. We use the testing data to get an estimate of the uncertainty of our predictions. 
+
+```{r}
+# create the testing data from the split object create above
+penguins_test <- testing(penguins_split)
+
+# predict with KNN
+# predict with mean imputation
+# append the testing data
+predictions <- bind_cols(  
+  predict(penguins_best, new_data = penguins_test),
+  .mean = mean(penguins_train$body_mass_g),
+  penguins_test
+)
+
+# rmse of KNN model
+rmse(data = predictions, truth = body_mass_g, estimate = .pred)
+
+# rmse of mean imputation
+rmse(data = predictions, truth = body_mass_g, estimate = .mean)
+
+```
+
+### Step 5: Make a new prediction
+
+I figured out how to fix the original measurements. We can now see how well our model did of predicting the actual missing observations. 
+
+```{r}
+predictions_na <- bind_cols(  
+  predict(penguins_best, new_data = penguins_na),
+  .mean = mean(penguins_train$body_mass_g),
+  penguins_na
+)
+
+# rmse of KNN model (the out-of-sample rmse is usually worse!)
+rmse(data = predictions_na, truth = body_mass_g_complete, estimate = .pred)
+
+# rmse of mean imputation
+rmse(data = predictions_na, truth = body_mass_g_complete, estimate = .mean)
+
+```
+
+## Exercise 3
+
+Example 3 uses simulated data with two predictors, $x_1$ and $x_2$, and one outcome variable $y$. 
+
+```{r}
+set.seed(20201005)
+
+x1 <- runif(n = 1000, min = 0, max = 10)
+x2 <- runif(n = 1000, min = 10, max = 20)
+
+data3 <- bind_cols(
+  x1 = x1,
+  x2 = x2,
+  y = 10 * sin(x1) + x2 + 20 + rnorm(n = length(x), mean = 0, sd = 2)
+)
+
+head(data3)
+
+```
+
