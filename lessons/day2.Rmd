@@ -19,7 +19,7 @@ output:
 
 ![](`r here::here("www", "images", "urban-institute-logo.png")`)
 
-# Regression, no not that regression, in R (lab)
+# Day 2: Regression, no not that regression, in R (lab)
 
 **Aaron R. Williams - Data Scientist (IBP)**
 
