@@ -305,19 +305,3 @@ knitr::include_graphics("images/modeling_process.png")
 
 **Source:** [Hands-on Machine Learning with R](https://bradleyboehmke.github.io/HOML/process.html#resampling)
 
-## CART
-
-* [Decision Tree: The Obama-Clinton Divide](https://archive.nytimes.com/www.nytimes.com/imagepages/2008/04/16/us/20080416_OBAMA_GRAPHIC.html?scp=5&sq=Decision%20Obama%20clinton&st=cse)
-* [R2D3: Intro to Machine Learning](http://www.r2d3.us/visual-intro-to-machine-learning-part-1/)
-
-```{r, out.width = "75%", echo = FALSE}
-knitr::include_graphics(here::here("lessons", "images", "Decision_Trees_web.png"))
-```
-
-**Source:** [Chris Albon](https://machinelearningflashcards.com/)
-
-```{r, out.width = "75%", echo = FALSE}
-knitr::include_graphics(here::here("lessons", "images", "Decision_Tree_Regression_web.png"))
-```
-
-**Source:** [Chris Albon](https://machinelearningflashcards.com/)

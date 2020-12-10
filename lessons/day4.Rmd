@@ -1,0 +1,234 @@
+---
+title: ""
+author: ""
+date: "`r format(Sys.time(), '%B %d, %Y %H:%M')`"
+output:
+  html_document:
+    toc: TRUE
+    toc_float: TRUE
+    css: !expr here::here("www", "web_report.css")
+    editor_options:
+      chunk_output_type: console
+---
+
+<style>
+@import url('https://fonts.googleapis.com/css?family=Lato&display=swap');
+</style>
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Lato" />
+
+![](`r here::here("www", "images", "urban-institute-logo.png")`)
+
+# Day 4
+
+
+```{r rmarkdown-setup, echo = FALSE}
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+
+options(scipen = 999)
+
+```
+
+## Review
+
+* Bias-Variance trade-off
+* $v$-fold cross validation
+
+## CART
+
+* [Decision Tree: The Obama-Clinton Divide](https://archive.nytimes.com/www.nytimes.com/imagepages/2008/04/16/us/20080416_OBAMA_GRAPHIC.html?scp=5&sq=Decision%20Obama%20clinton&st=cse)
+* [R2D3: Intro to Machine Learning](http://www.r2d3.us/visual-intro-to-machine-learning-part-1/)
+
+```{r, out.width = "75%", echo = FALSE}
+knitr::include_graphics(here::here("lessons", "images", "Decision_Trees_web.png"))
+```
+
+**Source:** [Chris Albon](https://machinelearningflashcards.com/)
+
+```{r, out.width = "75%", echo = FALSE}
+knitr::include_graphics(here::here("lessons", "images", "Decision_Tree_Regression_web.png"))
+```
+
+**Source:** [Chris Albon](https://machinelearningflashcards.com/)
+
+## New functions
+
+* `v_fold_cv()`
+* `tune()`
+* `decision_tree()`
+* `tune_grid()`
+* `collect_metrics()`
+* `collect_predictions()`
+* `select_best()`
+
+## Exercise 1
+
+Example 1 uses simulated data with one predictor $x$ and one outcome variable $y$.
+
+```{r}
+library(tidyverse)
+library(tidymodels)
+
+```
+
+
+### Step 0. Load the data
+
+```{r message = FALSE, warning = FALSE}
+set.seed(20201005)
+
+x1 <- runif(n = 1000, min = 0, max = 10)
+x2 <- runif(n = 1000, min = 10, max = 20)
+
+data1 <- bind_cols(
+  x1 = x1,
+  x2 = x2,
+  y = 10 * sin(x1) + x2 + 20 + rnorm(n = length(x1), mean = 0, sd = 2)
+)
+
+```
+
+### Step 1. Split the data into training and testing data
+
+```{r}
+set.seed(20201007)
+
+# create a split object
+data1_split <- initial_split(data = data1, prop = 0.75)
+
+# create the training and testing data
+data1_train <- training(x = data1_split)
+data1_test  <- testing(x = data1_split)
+
+```
+
+### Step 2. EDA
+
+```{r message = FALSE}
+GGally::ggpairs(data = data1_train)
+
+```
+
+### Step 3. Create a Recipe
+
+$x_1$ and $x_2$ are not on the same scale. It is important to *normalize* both variables before model estimation. 
+
+```{r}
+knn_recipe <- 
+  recipe(formula = y ~ ., data = data1_train) %>%
+  step_normalize(x1, x2)
+
+```
+
+### Step 4. Create resamples
+
+This creates a data structure with 10 v-folds. 
+
+```{r}
+folds <- vfold_cv(data = data1_train, v = 10)
+
+folds
+
+```
+
+### Step 5. Create a model
+
+Instead of specifying `neighbors = 5`, use `tune()` as a placeholder so the different values of $k$ can be passed to the model during hyperparameter tuning.  
+
+```{r}
+# create a knn model specification
+# knn_mod <- 
+#   nearest_neighbor(neighbors = 5) %>%
+#   set_engine(engine = "kknn") %>%
+#   set_mode(mode = "regression")
+
+# create a knn model specification
+knn_mod <- 
+  nearest_neighbor(neighbors = tune()) %>%
+  set_engine(engine = "kknn") %>%
+  set_mode(mode = "regression")
+
+```
+
+### Step 6. Create a workflow
+
+```{r}
+knn_workflow <- 
+  workflow() %>% 
+  add_model(spec = knn_mod) %>% 
+  add_recipe(recipe = knn_recipe)
+
+```
+
+### Step 7. Create a tuning grid
+
+Create a tuning grid for values of hyperparameters ranging from 1 to 15 by twos. It is common to use odd values of $k$ to limit ties. 
+
+```{r}
+knn_grid <- tibble(neighbors = seq(from = 1, to = 15, by = 2))
+
+knn_grid
+
+```
+
+### Step 8. Estimate models with resampling for each row in the tuning grid
+
+```{r}
+knn_res <-  
+  knn_workflow %>% 
+  tune_grid(resamples = folds,
+            grid = knn_grid,
+            control = control_grid(save_pred = TRUE),
+            metrics = metric_set(rmse))
+
+```
+
+### Evaluate the model
+
+```{r}
+# look at summaries
+knn_res %>%
+  collect_metrics()
+
+# look at individual values
+knn_res %>%
+  collect_metrics(summarize = FALSE)
+
+# make a plot
+knn_res %>%
+  collect_metrics(summarize = FALSE) %>%
+  mutate(neighbors = factor(neighbors)) %>%
+  ggplot(aes(id, .estimate, color = neighbors, group = neighbors)) +
+  geom_line() +
+  theme_minimal()
+
+# pick the best model 
+knn_res %>%
+  select_best()
+
+# look at predicted values from the resamples
+knn_res %>%
+  collect_predictions()
+
+```
+
+From here, it is possible to estimate the model with the optimal $k = 9$ on all of the training data, get one estimate of $\hat{RMSE}$ using the testing data, and then make predictions on new data. 
+
+## Exercise 2
+
+An illness has affected penguins near Palmer Station, Antarctica. We have a limited amount of medicine (5 doses) and the illness is much more damaging to penguins with low body mass. We have an historical data set with mass but we don't have a way to weigh the penguins near the stations.
+
+```{r}
+library(palmerpenguins)
+
+penguins <- penguins %>%
+  filter(complete.cases(.)) %>%
+  select(-year)
+
+penguins_new <- penguins[c(104, 92, 253, 8, 256, 88, 30, 119, 216, 251), 
+                         names(penguins) != "body_mass_g"]
+
+```
+
+Use CART and 10-fold cross validation to estimate a model, estimate the out-of-sample error rate, and predict the mass of `penguins_new`.
