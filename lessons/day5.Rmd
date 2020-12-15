@@ -1,0 +1,214 @@
+---
+title: ""
+author: ""
+date: "`r format(Sys.time(), '%B %d, %Y %H:%M')`"
+output:
+  html_document:
+    toc: TRUE
+    toc_float: TRUE
+    css: !expr here::here("www", "web_report.css")
+    editor_options:
+      chunk_output_type: console
+---
+
+<style>
+@import url('https://fonts.googleapis.com/css?family=Lato&display=swap');
+</style>
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Lato" />
+
+![](`r here::here("www", "images", "urban-institute-logo.png")`)
+
+```{r rmarkdown-setup, echo = FALSE}
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+
+```
+
+```{r echo = FALSE}
+options(scipen = 999)
+
+library(tidyverse)
+
+```
+
+# Intro to Classification
+
+## Review
+
+**Regression:** Supervised learning with a continuous numeric outcome.
+
+**Classification:** Supervised learning with a categorical outcome. The output of these models can be predicted classes of a categorical variable or predicted probabilities (e.g. 0.75 for "A" and 0.25 for "B").
+
+**GOAL:** For regression, the goal is to minimize the prediction error of the estimated regression model on new data (out-of-sample). 
+
+There are several metrics for estimating error. The most popular for regression is Root Mean Square Error (RMSE):
+
+$$RMSE = \sqrt{\frac{1}{n} \sum_{i = 1}^n (Y_i - \hat{Y_i})^2}$$
+
+## Classification
+
+**Binary classification:** Predicting one of two classes. For example, rat burrow or no rat burrow, lead paint or no lead paint, or insured or uninsured. Classes are often recoded to `1` and `0` as in logistic regression.
+
+**Multiclass classification:** Predicting one of three or more classes. For example, single filer, joint filer, or head of household; or on-time, delinquent, or defaulted. Classes can be recoded to integers for models like multinomial logistic regression, but many of the best models can handle factors.
+
+## Metrics
+
+Classification problems require a different set of error metrics and diagnostics than regression problems. Assume a binary classifier for the following definitions. Let an event be the outcome `1` in a binary classification problem and a non-event be the outcome `0`. 
+
+**True positive:** Correctly predicting an event. Predicting $\hat{y_i} = 1$ when $y_i = 1$
+
+**True negative:** Correctly predicting a non-event. Predicting $\hat{y_i} = 0$ when $y_i = 0$
+
+**False positive:** Incorrectly predicting an event for a non-event. Predicting $\hat{y_i} = 1$ when $y_i = 0$
+
+**False negative:** Incorrectly predicting a non-event for an event. Predicting $\hat{y_i} = 0$ when $y = 1$
+
+**Confusion matrix:** A simple matrix that compares predicted outcomes with actual outcomes. 
+
+```{r echo = FALSE, out.width = "50%"}
+knitr::include_graphics(here::here("lessons", "images", "tp-fp-fn-tn.png"))
+
+```
+
+**Accuracy:** The sum of the values on the main diagonal of the confusion matrix divided by the total number of predictions ($\frac{TP + TN}{total}$).
+
+### Example 1
+
+Consider the following set of true values and predicted values from a binary classification problem:
+
+```{r echo = FALSE}
+tribble(
+  ~true_value, ~predicted_value,
+  0, 0,
+  0, 0,
+  0, 0,
+  1, 0,  
+  1, 1,
+  1, 1,
+  0, 1,
+  0, 1,   
+  1, 1,
+  1, 1
+) %>%
+  knitr::kable()
+```
+
+The confusion matrix for this data:
+
+```{r echo = FALSE, out.width = "50%"}
+knitr::include_graphics(here::here("lessons", "images", "example5-1.png"))
+
+```
+
+### Example 2
+
+A test for breast cancer is 99.1% accurate across 1,000 tests. Is it a good test?
+
+```{r echo = FALSE, out.width = "50%"}
+knitr::include_graphics(here::here("lessons", "images", "example5-2.png"))
+
+```
+
+This test only accurately predicted one cancer case. In fact, a person was more likely to not have cancer given a positive test than to have cancer. This example demonstrates the base rate fallacy and the accuracy paradox. Both are the results of high class imbalance. Clearly we need more sophisticated way of evaluating classifiers than just accuracy. 
+
+## More Metrics
+
+```{r echo = FALSE, out.width = "85%"}
+knitr::include_graphics(here::here("lessons", "images", "confusion-matrix.jpeg"))
+```
+
+**Accuracy:** How often the classifier is correct. $\frac{TP +TN}{total}$. All else equal, we want to maximize accuracy.
+
+**Precision:** How often the classifier is correct when it predicts events. $\frac{TP}{TP+FP}$. All else equal, we want to maximize precision.
+
+**Recall/Sensitivity:** How often the classifier is correct when there is an event. $\frac{TP}{TP+FN}$. All else equal, we want to maximize recall/sensitivity.
+
+### Other Metrics
+
+**Specificity:** How often the classifier is correct when there is a non-event. $\frac{TN}{TN+FP}$. All else equal, we want to maximize specificity.
+
+**False Positive Rate:** 1 - Specificity
+
+### Example 2 continued
+
+```{r echo = FALSE, out.width = "50%"}
+knitr::include_graphics(here::here("lessons", "images", "example5-2.png"))
+
+```
+
+Precision: $\frac{TP}{TP + FP} = \frac{1}{1 + 4} = \frac{1}{5}$
+
+Recall/Sensitivity/True Positive Rate: $\frac{TP}{TP + FN} = \frac{1}{1 + 5} = \frac{1}{6}$
+
+The breast cancer test has poor precision and recall.
+
+<br>
+
+Specificity: $\frac{TN}{FP + TN} = \frac{990}{4 + 990} = \frac{990}{994}$
+
+$1 - Specificity = \frac{4}{994}$
+
+The breast cancer cancer test also has poor $1 - Specificity$ 
+
+$$\cdot\cdot\cdot$$
+
+Most algorithms for classification generate predicted classes and probabilities of predicted classes. A predicted probability of 0.99 for an event is very different than a predicted probability of 0.51. 
+
+To generate class predictions, usually a threshold is used. For example, if $\hat{P}(event) > 0.5$ then predict event. It is common to adjust the threshold to values other than 0.5. As 0.5 decreases, marginal cases shift from $\hat{y} = 0$ to $\hat{y} = 1$ because the threshold for an event decreases.
+
+As the threshold decreases:
+
+* precision decreases and sensitivity/recall increases
+* sensitivity increases and specificity decreases
+
+In general, the goal is to create a model that has high precision, high sensitivity/recall, and and high specificity. Changing the threshold is a movement along these tradeoffs. Estimating "better" models is often a way to improve these tradeoffs. Of course, there is some amount of irreducible error. 
+
+There are formalizations of these tradeoffs that are worth exploring but are beyond the scope of this lesson:
+
+* [ROC Curves and AUC](https://bradleyboehmke.github.io/HOML/process.html#classification-models)
+* Precision-recall curve
+
+## Relative costs
+
+True positives, true negatives, false positives, and false negatives can carry different costs and it is important to consider the relative costs when creating models and interventions.
+
+A false positive for a cancer test could result in more diagnostic tests. A false negative for a cancer test could lead to untreated cancer and severe health consequences. The relative differences in these outcomes should be considered. 
+
+A false positive for a rat burrow is a wasted trip for an exterminator. A false negative for an rat burrow is an untreated rat burrow. The difference in these outcomes is small, especially compared to the alternative of the exterminator guessing which alleys to visit. 
+
+### Multiclass metrics
+
+Consider a multiclass classification problem with three unique levels ("a", "b", "c")
+
+```{r echo = FALSE}
+tribble(
+  ~true_value, ~predicted_value,
+  "a", "a",
+  "a", "a",
+  "a", "a",
+  "a", "a",
+  "b", "b",
+  "b", "a",
+  "b", "b",
+  "b", "c",
+  "c", "c",
+  "c", "b",
+  "c", "a",
+  "c", "c"
+) %>%
+  knitr::kable()
+```
+
+Create a confusion matrix:
+
+```{r echo = FALSE, out.width = "50%"}
+knitr::include_graphics(here::here("lessons", "images", "confusion-matrix-multiclass.png"))
+
+```
+
+Accuracy still measures how often the classifier is correct. In multiclass classification problem, the correct predictions are on the diagonal. 
+
+Accuracy: $\frac{4 + 2 + 2}{12} = \frac{8}{12} = \frac{2}{3}$
+
+There are multiclass extensions of precision, recall/sensitivity, and specificity. They are beyond the scope of this class. 

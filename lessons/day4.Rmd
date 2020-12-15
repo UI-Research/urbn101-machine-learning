@@ -21,7 +21,6 @@ output:
 
 # Day 4
 
-
 ```{r rmarkdown-setup, echo = FALSE}
 knitr::opts_chunk$set(warning = FALSE)
 knitr::opts_chunk$set(message = FALSE)
