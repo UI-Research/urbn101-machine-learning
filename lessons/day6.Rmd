@@ -1,0 +1,286 @@
+---
+title: ""
+author: ""
+date: "`r format(Sys.time(), '%B %d, %Y %H:%M')`"
+output:
+  html_document:
+    toc: TRUE
+    toc_float: TRUE
+    css: !expr here::here("www", "web_report.css")
+    editor_options:
+      chunk_output_type: console
+---
+
+<style>
+@import url('https://fonts.googleapis.com/css?family=Lato&display=swap');
+</style>
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Lato" />
+
+![](`r here::here("www", "images", "urban-institute-logo.png")`)
+
+# Classification with `tidymodels`
+
+```{r rmarkdown-setup, echo = FALSE}
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+
+options(scipen = 999)
+
+```
+
+## Review
+
+* confusion matrix
+* accuracy
+* precision
+* recall/sensitivty
+
+## Exercise 1
+
+Example 1 uses data about penguins from the Palmer Archipelago in Antarctica. The data include measurements about three different species of penguins. This example only considers two classes and does not use resampling methods because only one model is estimated. 
+
+```{r}
+library(tidyverse)
+library(tidymodels)
+library(palmerpenguins)
+
+# drop to two species
+penguins_small <- 
+  bind_cols(
+    penguins,
+    random = runif(nrow(penguins))
+  ) %>%
+  mutate(
+    species = 
+      case_when(
+        species == "Adelie" ~ "Adelie",
+        species == "Gentoo" ~ "Gentoo",
+        species == "Chinstrap" & random < 0.5 ~ "Adelie",
+        species == "Chinstrap" & random > 0.5 ~ "Gentoo"
+        )
+    ) %>%
+  mutate(species = factor(species)) %>%
+  select(-random)
+
+# look at missing data
+map_dbl(.x = penguins_small, .f = ~ sum(is.na(.x)))
+
+# drop missing values
+penguins_small <- penguins_small %>%
+  filter(complete.cases(.))
+
+```
+
+### Step 1. Split the data into training and testing data
+
+```{r}
+set.seed(20201013)
+
+# create a split object
+penguins_small_split <- initial_split(data = penguins_small, prop = 0.8)
+
+# create the training and testing data
+penguins_small_train <- training(x = penguins_small_split) 
+penguins_small_test <- testing(x = penguins_small_split)
+
+rm(penguins_small)
+
+```
+
+### Step 2. EDA
+
+```{r}
+penguins_small_train %>%
+  ggplot(aes(x = flipper_length_mm, y = bill_length_mm, color = species)) +
+  geom_point() +
+  theme_minimal()
+
+```
+
+## Step 3. Create resamples
+
+```{r}
+set.seed(20201217)
+folds <- vfold_cv(data = penguins_small_train, v = 10)
+
+```
+
+### Step 4. Create a model specification
+
+```{r}
+knn_recipe <- 
+  recipe(formula = species ~ ., data = penguins_small_train) %>%
+  step_range(bill_length_mm, bill_depth_mm, flipper_length_mm, body_mass_g)
+
+knn_mod <- 
+  nearest_neighbor(neighbors = tune()) %>%
+  set_engine(engine = "kknn") %>%
+  set_mode(mode = "classification")
+
+knn_workflow <- 
+  workflow() %>% 
+  add_model(spec = knn_mod) %>% 
+  add_recipe(recipe = knn_recipe)
+
+```
+
+
+### Step 5. Estimate the models
+
+```{r}
+knn_grid <- tibble(neighbors = seq(from = 1, to = 15, by = 2))
+
+knn_res <-  
+  knn_workflow %>% 
+  tune_grid(resamples = folds,
+            grid = knn_grid)
+
+knn_res %>%
+  collect_metrics()
+
+```
+
+## Exercise 2
+
+We're going to repeat exercise 1 with a CART model instead of KNN. 
+
+```{r}
+# create a cart model object
+cart_mod <- 
+  decision_tree() %>%
+  set_engine(engine = "rpart") %>%
+  set_mode(mode = "classification")
+
+cart_workflow <- 
+  workflow() %>% 
+  add_model(spec = cart_mod) %>% 
+  add_recipe(recipe = knn_recipe)
+
+cart_res <-  
+  cart_workflow %>% 
+  tune_grid(resamples = folds,
+            grid = knn_grid)
+
+cart_res %>%
+  collect_metrics()
+
+```
+
+## Exercise 3
+
+We compared CART and KNN across the resamples. Let's estimate CART on all of the training data. 
+
+### Step 1. Estimate on all of the data
+
+```{r}
+final_mod <- cart_mod %>%
+  fit(formula = species ~ ., data = penguins_small_train)
+
+```
+
+### Step 2. Make predictions on the testing data
+
+```{r}
+# predict the predicted class and the predicted probability of each class
+predictions <- bind_cols(
+  penguins_small_test,
+  predict(object = final_mod, new_data = penguins_small_test),
+  predict(object = final_mod, new_data = penguins_small_test, type = "prob")
+)
+
+select(predictions, species, starts_with(".pred")) %>%
+  sample_n(10)
+
+```
+
+### Step 3. Look at the model
+
+```{r}
+rpart.plot::rpart.plot(x = final_mod$fit)
+
+```
+
+### Step 4. Evaluate the model
+
+Create a confusion matrix:
+
+```{r}
+conf_mat(data = predictions,
+         truth = species,
+         estimate = .pred_class)
+
+```
+
+"Adelie" is the "event". 
+
+1. Calculate the accuracy
+2. Calculate the precision
+3. Calculate the sensitivity
+
+#### Answers
+
+1. Calculate the accuracy
+
+$$Accuracy = \frac{TP + TN}{total} = \frac{32 + 27}{66} = \frac{59}{66} \approx 0.894$$
+
+```{r}
+accuracy(data = predictions,
+         truth = species,
+         estimate = .pred_class)
+
+```
+
+2. Calculate the precision
+
+$$Precision = \frac{TP}{TP + FP} = \frac{32}{32 + 4} = \frac{32}{36} \approx 0.889$$
+
+```{r}
+precision(data = predictions,
+          truth = species,
+          estimate = .pred_class)
+```
+
+3. Calculate the recall/sensitivity
+
+$$Sensitivity = \frac{32}{32 + 3} = \frac{32}{35} \approx 0.914$$
+
+```{r}
+recall(data = predictions,
+       truth = species,
+       estimate = .pred_class)
+
+```
+
+### Step 6. Make a New Prediction
+
+```{r echo = FALSE}
+knitr::include_graphics(here::here("lessons", "images", "penguins.png"))
+```
+
+Photo by: [Lescroël, A. L.; Ballard, G.; Grémillet, D.; Authier, M.; Ainley, D. G. (2014)](https://en.wikipedia.org/wiki/Ad%C3%A9lie_penguin#/media/File:Automated_weighbridge_for_Ad%C3%A9lie_penguins_-_journal.pone.0085291.g002.png)
+
+```{r}
+new_penguins <- tribble(
+  ~island, ~bill_length_mm, ~bill_depth_mm, ~flipper_length_mm, ~body_mass_g, ~sex, ~year,
+  "Torgersen", 40, 19, 190, 4000, "male", 2008
+)
+
+predict(object = final_mod, new_data = new_penguins)
+
+predict(object = final_mod, new_data = new_penguins, type = "prob")
+
+```
+
+### Bonus
+
+[Variable Importance](https://topepo.github.io/caret/variable-importance.html)
+
+```{r eval = FALSE}
+library(vip)
+
+final_mod %>% 
+  vip(num_features = 10)
+
+```
+

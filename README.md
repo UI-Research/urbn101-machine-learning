@@ -9,7 +9,7 @@ This repository contains materials for a six-session training about supervized m
 * [Day 3](https://ui-research.github.io/urbn101-machine-learning/lessons/day3)
 * [Day 4](https://ui-research.github.io/urbn101-machine-learning/lessons/day4)
 * [Day 5](https://ui-research.github.io/urbn101-machine-learning/lessons/day5)
-* Day 6
+* [Day 6](https://ui-research.github.io/urbn101-machine-learning/lessons/day6)
 
 ## Recommended Reading
 
